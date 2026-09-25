@@ -10,6 +10,10 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: todos
+    description: Todo list operations
+  - name: ai
+    description: AI task generation
 paths:
   /healthz:
     get:
@@ -24,7 +28,135 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /todos:
+    get:
+      operationId: listTodos
+      tags: [todos]
+      summary: List todos
+      responses:
+        "200":
+          description: Todo list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Todo"
+    post:
+      operationId: createTodo
+      tags: [todos]
+      summary: Create a todo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TodoInput"
+      responses:
+        "201":
+          description: Created todo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Todo"
+        "400":
+          description: Invalid todo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /todos/summary:
+    get:
+      operationId: getTodoSummary
+      tags: [todos]
+      summary: Get todo summary
+      responses:
+        "200":
+          description: Summary of todo completion
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TodoSummary"
+  /todos/{id}:
+    patch:
+      operationId: updateTodo
+      tags: [todos]
+      summary: Update a todo
+      parameters:
+        - $ref: "#/components/parameters/TodoId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TodoUpdate"
+      responses:
+        "200":
+          description: Updated todo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Todo"
+        "400":
+          description: Invalid todo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Todo not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      operationId: deleteTodo
+      tags: [todos]
+      summary: Delete a todo
+      parameters:
+        - $ref: "#/components/parameters/TodoId"
+      responses:
+        "204":
+          description: Todo deleted
+        "404":
+          description: Todo not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /ai/generate-tasks:
+    post:
+      operationId: generateTasks
+      tags: [ai]
+      summary: Turn a prompt into actionable tasks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiPromptInput"
+      responses:
+        "200":
+          description: AI-generated task suggestions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiTaskSuggestions"
+        "400":
+          description: Invalid prompt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 components:
+  parameters:
+    TodoId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +165,140 @@ components:
           type: string
       required:
         - status
-
+    Todo:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        completed:
+          type: boolean
+        priority:
+          type: string
+          enum: [low, medium, high]
+        dueDate:
+          type: ["string", "null"]
+          format: date
+        category:
+          type: string
+        aiGenerated:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - completed
+        - priority
+        - dueDate
+        - category
+        - aiGenerated
+        - createdAt
+        - updatedAt
+    TodoInput:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+        priority:
+          type: string
+          enum: [low, medium, high]
+          default: medium
+        dueDate:
+          type: ["string", "null"]
+          format: date
+        category:
+          type: string
+          default: General
+        aiGenerated:
+          type: boolean
+          default: false
+      required:
+        - title
+    TodoUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+        completed:
+          type: boolean
+        priority:
+          type: string
+          enum: [low, medium, high]
+        dueDate:
+          type: ["string", "null"]
+          format: date
+        category:
+          type: string
+    TodoSummary:
+      type: object
+      properties:
+        total:
+          type: integer
+        completed:
+          type: integer
+        remaining:
+          type: integer
+        completionRate:
+          type: integer
+        today:
+          type: integer
+      required:
+        - total
+        - completed
+        - remaining
+        - completionRate
+        - today
+    AiPromptInput:
+      type: object
+      properties:
+        prompt:
+          type: string
+          minLength: 3
+          maxLength: 500
+      required:
+        - prompt
+    AiTaskSuggestion:
+      type: object
+      properties:
+        title:
+          type: string
+        priority:
+          type: string
+          enum: [low, medium, high]
+        category:
+          type: string
+        dueDate:
+          type: ["string", "null"]
+          format: date
+      required:
+        - title
+        - priority
+        - category
+        - dueDate
+    AiTaskSuggestions:
+      type: object
+      properties:
+        intro:
+          type: string
+        tasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/AiTaskSuggestion"
+      required:
+        - intro
+        - tasks
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error

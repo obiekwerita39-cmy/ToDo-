@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "AI Todo"
+description = "A focused todo app that turns a short natural-language prompt into actionable tasks, then helps you organize and complete them."
+version = "1.0.0"
+id = "artifacts/ai-todo"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19039
+
+[services.development]
+run = "pnpm --filter @workspace/ai-todo run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/ai-todo", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/ai-todo/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19039"
+BASE_PATH = "/"
