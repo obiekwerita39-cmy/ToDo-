@@ -1,6 +1,6 @@
 kind = "web"
 previewPath = "/"
-title = "AI Todo"
+title = "Todo."
 description = "A focused todo app that turns a short natural-language prompt into actionable tasks, then helps you organize and complete them."
 version = "1.0.0"
 id = "artifacts/ai-todo"
