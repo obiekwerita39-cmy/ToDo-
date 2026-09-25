@@ -204,7 +204,7 @@ export default function Home() {
       <aside className="sidebar">
         <div className="brand-lockup" data-testid="text-brand">
           <div className="brand-orbit"><Leaf size={18} /></div>
-          <span>daymark</span>
+           <span>Todo</span>
         </div>
         <div className="sidebar-intro">
           <span className="sidebar-kicker">PERSONAL SPACE</span>
@@ -231,7 +231,7 @@ export default function Home() {
           <div className="primary-column">
             <section className="prompt-card" data-testid="card-ai-prompt">
               <div className="prompt-ornament"><div /><div /><div /></div>
-              <div className="prompt-heading"><span className="eyebrow"><Sparkles size={14} /> DAYMARK AI</span><h2>What would make<br /><em>today feel lighter?</em></h2></div>
+               <div className="prompt-heading"><span className="eyebrow"><Sparkles size={14} /> TODO AI</span><h2>What would make<br /><em>today feel lighter?</em></h2></div>
               <form onSubmit={handleGenerate} className="prompt-form">
                 <textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="e.g. Prepare for my trip next weekend..." maxLength={500} rows={2} data-testid="input-ai-prompt" />
                 <div className="prompt-footer"><span>{prompt.length > 0 ? `${prompt.length} / 500` : 'A short thought is enough'}</span><button type="submit" className="generate-button" disabled={generateTasks.isPending || prompt.trim().length < 3} data-testid="button-generate-tasks">{generateTasks.isPending ? <><RefreshCw className="spin" size={16} /> Thinking...</> : <>Make a plan <ArrowUpRight size={16} /></>}</button></div>
@@ -259,7 +259,7 @@ export default function Home() {
               {showComposer && <form className="manual-composer animate-rise" onSubmit={addManualTask}><input autoFocus value={newTask} onChange={(event) => setNewTask(event.target.value)} placeholder="Name the next small thing..." aria-label="New task title" data-testid="input-new-task" /><button type="submit" disabled={!newTask.trim()} data-testid="button-save-new-task"><Check size={16} /> Add</button></form>}
               <div className="filter-bar"><div className="filter-tabs">{(['all', 'active', 'done'] as Filter[]).map((item) => <button key={item} className={filter === item ? 'selected' : ''} onClick={() => setFilter(item)} data-testid={`button-filter-${item}`}>{item === 'all' ? 'All' : item === 'active' ? 'To do' : 'Done'}</button>)}</div><label className="category-filter"><ListFilter size={14} /><select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} aria-label="Filter by category" data-testid="select-category-filter">{categories.map((category) => <option key={category} value={category}>{category === 'all' ? 'All areas' : category}</option>)}</select><ChevronDown size={13} /></label></div>
               <div className="todo-list">
-                {todosQuery.isLoading ? <><TaskSkeleton /><TaskSkeleton /><TaskSkeleton /></> : todosQuery.isError ? <div className="empty-state error-state" data-testid="status-todos-error"><Archive size={24} /><strong>Your list is taking a quiet moment.</strong><button onClick={() => void todosQuery.refetch()} data-testid="button-retry-todos">Try again</button></div> : visibleTodos.length === 0 ? <div className="empty-state" data-testid="status-todos-empty"><div className="empty-mark"><Leaf size={23} /></div><strong>{filter === 'done' ? 'Nothing finished just yet.' : 'A clear page is a good place to begin.'}</strong><span>{filter === 'done' ? 'Your completed tasks will gather here.' : 'Ask Daymark for a starting point above.'}</span></div> : visibleTodos.map((todo) => <TaskRow key={todo.id} todo={todo} onToggle={toggleTodo} onDelete={removeTodo} />)}
+                 {todosQuery.isLoading ? <><TaskSkeleton /><TaskSkeleton /><TaskSkeleton /></> : todosQuery.isError ? <div className="empty-state error-state" data-testid="status-todos-error"><Archive size={24} /><strong>Your list is taking a quiet moment.</strong><button onClick={() => void todosQuery.refetch()} data-testid="button-retry-todos">Try again</button></div> : visibleTodos.length === 0 ? <div className="empty-state" data-testid="status-todos-empty"><div className="empty-mark"><Leaf size={23} /></div><strong>{filter === 'done' ? 'Nothing finished just yet.' : 'A clear page is a good place to begin.'}</strong><span>{filter === 'done' ? 'Your completed tasks will gather here.' : 'Ask Todo for a starting point above.'}</span></div> : visibleTodos.map((todo) => <TaskRow key={todo.id} todo={todo} onToggle={toggleTodo} onDelete={removeTodo} />)}
               </div>
             </section>
           </div>
