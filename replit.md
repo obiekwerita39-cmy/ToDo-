@@ -1,15 +1,16 @@
-# [Project name]
+# AI Todo
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+AI Todo turns a short natural-language prompt into actionable tasks, then helps users organize, complete, and review their personal list.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/api-server run dev` — run the API server
 - `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
+- `pnpm --filter @workspace/ai-todo run typecheck` — typecheck the frontend
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- Required env: `DATABASE_URL` — managed PostgreSQL connection string
+- Optional env: `OPENAI_API_KEY` — enables provider-backed task generation; the app uses a local planner when it is not configured
 
 ## Stack
 
@@ -22,23 +23,33 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/ai-todo/src/pages/home.tsx` — main todo workspace and interactions
+- `artifacts/ai-todo/src/index.css` — visual theme and responsive layout
+- `lib/api-spec/openapi.yaml` — API source of truth
+- `artifacts/api-server/src/routes/todos.ts` — todo and AI endpoints
+- `artifacts/api-server/src/lib/task-planner.ts` — provider-backed planner with local fallback
+- `lib/db/src/schema/todos.ts` — todo table and insert model
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- AI suggestions are previewed before they are saved, so users stay in control of what enters their list.
+- The API supports OpenAI when `OPENAI_API_KEY` is available and falls back to a deterministic local planner so the core workflow remains usable without an external provider.
+- Todo state is persisted in PostgreSQL; the client invalidates list and summary queries after every mutation.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Prompt-to-task planning with generated suggestions and add-one/add-all controls
+- Manual task creation, completion toggles, deletion, status filters, and category filtering
+- Completion summary, today count, category progress, loading states, error recovery, and responsive mobile layout
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+No additional preferences recorded.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Regenerate API clients after changing `lib/api-spec/openapi.yaml`.
+- The frontend build expects workflow-provided `PORT` and `BASE_PATH`; use the managed web workflow for previewing.
 
 ## Pointers
 
