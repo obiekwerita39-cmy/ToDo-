@@ -1,7 +1,5 @@
-import { useMemo, useState, type CSSProperties, type FormEvent } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useEffect, useMemo, useState, type CSSProperties, type FormEvent } from 'react';
 import {
-  Archive,
   ArrowUpRight,
   CalendarDays,
   Check,
@@ -19,17 +17,18 @@ import {
   X,
 } from 'lucide-react';
 import { format, isToday, parseISO } from 'date-fns';
-import {
-  getGetTodoSummaryQueryKey,
-  getListTodosQueryKey,
-  useCreateTodo,
-  useDeleteTodo,
-  useGenerateTasks,
-  useGetTodoSummary,
-  useListTodos,
-  useUpdateTodo,
-} from '@workspace/api-client-react';
-import type { Todo } from '@workspace/api-client-react';
+
+type Todo = {
+  id: number;
+  title: string;
+  completed: boolean;
+  priority: Priority;
+  dueDate: string | null;
+  category: string;
+  aiGenerated: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
 
 type Filter = 'all' | 'active' | 'done';
 type Priority = 'low' | 'medium' | 'high';
@@ -122,7 +121,6 @@ function SuggestionRow({ task, index, onAdd }: { task: Suggestion; index: number
 }
 
 export default function Home() {
-  const queryClient = useQueryClient();
   const [prompt, setPrompt] = useState('');
   const [suggestions, setSuggestions] = useState<Suggestions | null>(null);
   const [addedSuggestions, setAddedSuggestions] = useState<number[]>([]);
@@ -131,73 +129,173 @@ export default function Home() {
   const [newTask, setNewTask] = useState('');
   const [showComposer, setShowComposer] = useState(false);
 
-  const todosQuery = useListTodos();
-  const summaryQuery = useGetTodoSummary();
-  const generateTasks = useGenerateTasks();
-  const createTodo = useCreateTodo();
-  const updateTodo = useUpdateTodo();
-  const deleteTodo = useDeleteTodo();
+  const [todos, setTodos] = useState<Todo[]>(() => {
+    try {
+      const saved = localStorage.getItem('todo-ai-todos');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
-  const todos = todosQuery.data ?? [];
-  const categories = useMemo(() => ['all', ...Array.from(new Set(todos.map((todo) => todo.category).filter(Boolean)))], [todos]);
-  const visibleTodos = useMemo(() => todos.filter((todo) => {
-    const statusMatch = filter === 'all' || (filter === 'active' ? !todo.completed : todo.completed);
-    const categoryMatch = categoryFilter === 'all' || todo.category === categoryFilter;
-    return statusMatch && categoryMatch;
-  }), [todos, filter, categoryFilter]);
+  useEffect(() => {
+    localStorage.setItem('todo-ai-todos', JSON.stringify(todos));
+  }, [todos]);
 
-  const invalidateTodos = () => {
-    void queryClient.invalidateQueries({ queryKey: getListTodosQueryKey() });
-    void queryClient.invalidateQueries({ queryKey: getGetTodoSummaryQueryKey() });
-  };
+  const summary = useMemo(() => {
+    const completed = todos.filter((todo) => todo.completed).length;
+    const remaining = todos.length - completed;
+    const today = todos.filter((todo) => {
+      if (!todo.dueDate) return false;
+      return isToday(parseISO(todo.dueDate));
+    }).length;
+
+    return {
+      total: todos.length,
+      completed,
+      remaining,
+      today,
+      completionRate: todos.length ? (completed / todos.length) * 100 : 0,
+    };
+  }, [todos]);
+
+  const categories = useMemo(
+    () => ['all', ...Array.from(new Set(todos.map((todo) => todo.category).filter(Boolean)))],
+    [todos],
+  );
+
+  const visibleTodos = useMemo(
+    () =>
+      todos.filter((todo) => {
+        const statusMatch =
+          filter === 'all' ||
+          (filter === 'active' ? !todo.completed : todo.completed);
+        const categoryMatch =
+          categoryFilter === 'all' || todo.category === categoryFilter;
+        return statusMatch && categoryMatch;
+      }),
+    [todos, filter, categoryFilter],
+  );
 
   const handleGenerate = (event: FormEvent) => {
     event.preventDefault();
     const cleanPrompt = prompt.trim();
-    if (cleanPrompt.length < 3 || generateTasks.isPending) return;
-    generateTasks.mutate({ data: { prompt: cleanPrompt } }, {
-      onSuccess: (result) => {
-        setSuggestions(result as Suggestions);
-        setAddedSuggestions([]);
-      },
-    });
+    if (cleanPrompt.length < 3) return;
+
+    const newSuggestions: Suggestions = {
+      intro: `Here is a simple plan for "${cleanPrompt}".`,
+      tasks: [
+        {
+          title: `Start: ${cleanPrompt}`,
+          priority: 'high',
+          category: 'Planning',
+          dueDate: null,
+        },
+        {
+          title: `Work on the main part of ${cleanPrompt}`,
+          priority: 'medium',
+          category: 'Work',
+          dueDate: null,
+        },
+        {
+          title: `Review your progress on ${cleanPrompt}`,
+          priority: 'low',
+          category: 'Review',
+          dueDate: null,
+        },
+      ],
+    };
+
+    setSuggestions(newSuggestions);
+    setAddedSuggestions([]);
+  };
+
+  const createLocalTodo = (
+    data: Omit<Todo, 'id' | 'createdAt' | 'updatedAt' | 'completed'> &
+      Partial<Pick<Todo, 'completed'>>,
+  ) => {
+    const now = new Date().toISOString();
+
+    const todo: Todo = {
+      id: Date.now() + Math.floor(Math.random() * 1000),
+      title: data.title,
+      completed: data.completed ?? false,
+      priority: data.priority,
+      category: data.category,
+      dueDate: data.dueDate,
+      aiGenerated: data.aiGenerated,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    setTodos((current) => [todo, ...current]);
+    return todo;
   };
 
   const addSuggestion = (task: Suggestion, index: number) => {
-    if (addedSuggestions.includes(index) || createTodo.isPending) return;
-    createTodo.mutate({ data: { title: task.title, priority: task.priority, category: task.category, dueDate: task.dueDate, aiGenerated: true } }, {
-      onSuccess: () => {
-        setAddedSuggestions((current) => [...current, index]);
-        invalidateTodos();
-      },
+    if (addedSuggestions.includes(index)) return;
+
+    createLocalTodo({
+      title: task.title,
+      priority: task.priority,
+      category: task.category,
+      dueDate: task.dueDate,
+      aiGenerated: true,
     });
+
+    setAddedSuggestions((current) => [...current, index]);
   };
 
   const addAllSuggestions = () => {
     suggestions?.tasks.forEach((task, index) => {
-      if (!addedSuggestions.includes(index)) addSuggestion(task, index);
+      if (!addedSuggestions.includes(index)) {
+        addSuggestion(task, index);
+      }
     });
   };
 
   const addManualTask = (event: FormEvent) => {
     event.preventDefault();
     const title = newTask.trim();
-    if (!title || createTodo.isPending) return;
-    createTodo.mutate({ data: { title, category: 'General', priority: 'medium', aiGenerated: false, dueDate: null } }, {
-      onSuccess: () => { setNewTask(''); setShowComposer(false); invalidateTodos(); },
+    if (!title) return;
+
+    createLocalTodo({
+      title,
+      category: 'General',
+      priority: 'medium',
+      aiGenerated: false,
+      dueDate: null,
     });
+
+    setNewTask('');
+    setShowComposer(false);
   };
 
   const toggleTodo = (todo: Todo) => {
-    updateTodo.mutate({ id: todo.id, data: { completed: !todo.completed } }, { onSuccess: invalidateTodos });
+    setTodos((current) =>
+      current.map((item) =>
+        item.id === todo.id
+          ? {
+              ...item,
+              completed: !item.completed,
+              updatedAt: new Date().toISOString(),
+            }
+          : item,
+      ),
+    );
   };
 
   const removeTodo = (todo: Todo) => {
     if (!window.confirm(`Remove "${todo.title}" from your list?`)) return;
-    deleteTodo.mutate({ id: todo.id }, { onSuccess: invalidateTodos });
+    setTodos((current) => current.filter((item) => item.id !== todo.id));
   };
 
-  const currentFilterLabel = filter === 'all' ? 'Everything' : filter === 'active' ? 'In progress' : 'Completed';
+  const currentFilterLabel =
+    filter === 'all'
+      ? 'Everything'
+      : filter === 'active'
+        ? 'In progress'
+        : 'Completed';
 
   return (
     <div className="app-shell workspace-texture selection-warm" data-testid="page-todo-workspace">
@@ -211,8 +309,8 @@ export default function Home() {
           <p>Plans that leave<br />room to breathe.</p>
         </div>
         <nav className="side-nav" aria-label="Main navigation">
-          <button className="side-nav-item active" data-testid="button-nav-today"><Inbox size={17} /><span>Today</span><b>{summaryQuery.data?.today ?? '—'}</b></button>
-          <button className="side-nav-item" onClick={() => setFilter('active')} data-testid="button-nav-in-progress"><Focus size={17} /><span>In progress</span><b>{summaryQuery.data?.remaining ?? '—'}</b></button>
+          <button className="side-nav-item active" data-testid="button-nav-today"><Inbox size={17} /><span>Today</span><b>{summary.today}</b></button>
+          <button className="side-nav-item" onClick={() => setFilter('active')} data-testid="button-nav-in-progress"><Focus size={17} /><span>In progress</span><b>{summary.remaining}</b></button>
           <button className="side-nav-item" onClick={() => setFilter('done')} data-testid="button-nav-completed"><CircleCheck size={17} /><span>Completed</span></button>
         </nav>
         <div className="sidebar-bottom">
@@ -234,19 +332,19 @@ export default function Home() {
                <div className="prompt-heading"><span className="eyebrow"><Sparkles size={14} /> TODO AI</span><h2>What would make<br /><em>today feel lighter?</em></h2></div>
               <form onSubmit={handleGenerate} className="prompt-form">
                 <textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="e.g. Prepare for my trip next weekend..." maxLength={500} rows={2} data-testid="input-ai-prompt" />
-                <div className="prompt-footer"><span>{prompt.length > 0 ? `${prompt.length} / 500` : 'A short thought is enough'}</span><button type="submit" className="generate-button" disabled={generateTasks.isPending || prompt.trim().length < 3} data-testid="button-generate-tasks">{generateTasks.isPending ? <><RefreshCw className="spin" size={16} /> Thinking...</> : <>Make a plan <ArrowUpRight size={16} /></>}</button></div>
+                <div className="prompt-footer"><span>{prompt.length > 0 ? `${prompt.length} / 500` : 'A short thought is enough'}</span><button type="submit" className="generate-button" disabled={false || prompt.trim().length < 3} data-testid="button-generate-tasks">{false ? <><RefreshCw className="spin" size={16} /> Thinking...</> : <>Make a plan <ArrowUpRight size={16} /></>}</button></div>
               </form>
-              {generateTasks.isError && <div className="inline-error" data-testid="status-generate-error">That didn’t come through. Try again in a moment.</div>}
+              {false && <div className="inline-error" data-testid="status-generate-error">That didn’t come through. Try again in a moment.</div>}
             </section>
 
-            {generateTasks.isPending && (
+            {false && (
               <section className="suggestions-card loading-suggestions" data-testid="status-generate-loading">
                 <div className="suggestion-loading-title"><span /><span /></div>
                 <div className="suggestion-loading-rows"><i /><i /><i /></div>
               </section>
             )}
 
-            {suggestions && !generateTasks.isPending && (
+            {suggestions && !false && (
               <section className="suggestions-card animate-rise" data-testid="card-ai-suggestions">
                 <div className="suggestions-header"><div><span className="eyebrow"><Sparkles size={13} /> A THOUGHTFUL START</span><h3>{suggestions.intro || 'Here is a lighter way in.'}</h3></div><button className="icon-button" onClick={() => setSuggestions(null)} aria-label="Dismiss suggestions" data-testid="button-dismiss-suggestions"><X size={18} /></button></div>
                 <div className="suggestion-list">{suggestions.tasks.map((task, index) => <SuggestionRow key={`${task.title}-${index}`} task={task} index={index} onAdd={addSuggestion} />)}</div>
@@ -259,12 +357,12 @@ export default function Home() {
               {showComposer && <form className="manual-composer animate-rise" onSubmit={addManualTask}><input autoFocus value={newTask} onChange={(event) => setNewTask(event.target.value)} placeholder="Name the next small thing..." aria-label="New task title" data-testid="input-new-task" /><button type="submit" disabled={!newTask.trim()} data-testid="button-save-new-task"><Check size={16} /> Add</button></form>}
               <div className="filter-bar"><div className="filter-tabs">{(['all', 'active', 'done'] as Filter[]).map((item) => <button key={item} className={filter === item ? 'selected' : ''} onClick={() => setFilter(item)} data-testid={`button-filter-${item}`}>{item === 'all' ? 'All' : item === 'active' ? 'To do' : 'Done'}</button>)}</div><label className="category-filter"><ListFilter size={14} /><select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} aria-label="Filter by category" data-testid="select-category-filter">{categories.map((category) => <option key={category} value={category}>{category === 'all' ? 'All areas' : category}</option>)}</select><ChevronDown size={13} /></label></div>
               <div className="todo-list">
-                 {todosQuery.isLoading ? <><TaskSkeleton /><TaskSkeleton /><TaskSkeleton /></> : todosQuery.isError ? <div className="empty-state error-state" data-testid="status-todos-error"><Archive size={24} /><strong>Your list is taking a quiet moment.</strong><button onClick={() => void todosQuery.refetch()} data-testid="button-retry-todos">Try again</button></div> : visibleTodos.length === 0 ? <div className="empty-state" data-testid="status-todos-empty"><div className="empty-mark"><Leaf size={23} /></div><strong>{filter === 'done' ? 'Nothing finished just yet.' : 'A clear page is a good place to begin.'}</strong><span>{filter === 'done' ? 'Your completed tasks will gather here.' : 'Ask Todo for a starting point above.'}</span></div> : visibleTodos.map((todo) => <TaskRow key={todo.id} todo={todo} onToggle={toggleTodo} onDelete={removeTodo} />)}
+                 {visibleTodos.length === 0 ? <div className="empty-state" data-testid="status-todos-empty"><div className="empty-mark"><Leaf size={23} /></div><strong>{filter === 'done' ? 'Nothing finished just yet.' : 'A clear page is a good place to begin.'}</strong><span>{filter === 'done' ? 'Your completed tasks will gather here.' : 'Ask Todo for a starting point above.'}</span></div> : visibleTodos.map((todo) => <TaskRow key={todo.id} todo={todo} onToggle={toggleTodo} onDelete={removeTodo} />)}
               </div>
             </section>
           </div>
           <aside className="right-column">
-            <SummaryCard summary={summaryQuery.data} loading={summaryQuery.isLoading} />
+            <SummaryCard summary={summary} loading={false} />
             <section className="mini-card" data-testid="card-focus-note"><div className="mini-card-top"><span className="eyebrow">A SMALL REMINDER</span><Leaf size={18} /></div><p>Momentum is not a mood you wait for. It is one small thing, then another.</p><span className="mini-card-line" /></section>
             <section className="areas-card" data-testid="card-areas"><div className="eyebrow">AREAS IN MOTION</div>{categories.slice(1, 4).map((category, index) => { const areaTodos = todos.filter((todo) => todo.category === category); const done = areaTodos.filter((todo) => todo.completed).length; return <button key={category} className="area-row" onClick={() => { setCategoryFilter(category); setFilter('all'); }} data-testid={`button-category-${category}`}><span className={`area-dot area-dot-${index}`} /><span>{category}</span><small>{done}/{areaTodos.length}</small></button>; })}{categories.length === 1 && <div className="areas-empty">Your areas will appear as you plan.</div>}</section>
           </aside>
