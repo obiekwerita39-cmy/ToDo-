@@ -46,12 +46,15 @@ function formatDueDate(value: string | null) {
 
 function PriorityMark({ priority }: { priority: Priority }) {
   return (
-    <span data-testid={`badge-priority-${priority}`} className={`priority-mark priority-${priority}`} aria-label={`${priorityLabels[priority]} priority`}>
+    <span
+      data-testid={`badge-priority-${priority}`}
+      className={`priority-mark priority-${priority}`}
+      aria-label={`${priorityLabels[priority]} priority`}
+    >
       <span />
     </span>
   );
 }
-
 function SummaryCard({ summary, loading }: { summary?: { total: number; completed: number; remaining: number; completionRate: number; today: number }; loading: boolean }) {
   const rate = summary?.completionRate ?? 0;
   return (
@@ -121,6 +124,17 @@ function SuggestionRow({ task, index, onAdd }: { task: Suggestion; index: number
 }
 
 export default function Home() {
+  const [userName, setUserName] = useState(() => localStorage.getItem('todo-user-name') || '');
+  const [nameInput, setNameInput] = useState('');
+
+  const saveName = (event: FormEvent) => {
+    event.preventDefault();
+    const cleanName = nameInput.trim();
+    if (!cleanName) return;
+    localStorage.setItem('todo-user-name', cleanName);
+    setUserName(cleanName);
+  };
+
   const [prompt, setPrompt] = useState('');
   const [suggestions, setSuggestions] = useState<Suggestions | null>(null);
   const [addedSuggestions, setAddedSuggestions] = useState<number[]>([]);
@@ -297,6 +311,76 @@ export default function Home() {
         ? 'In progress'
         : 'Completed';
 
+          if (!userName) {
+    return (
+      <main
+        style={{
+          minHeight: "100vh",
+          display: "grid",
+          placeItems: "center",
+          padding: "24px",
+          background: "var(--background, #f8f7f3)",
+        }}
+      >
+        <form
+          onSubmit={saveName}
+          style={{
+            width: "min(100%, 440px)",
+            padding: "40px",
+            borderRadius: "24px",
+            background: "white",
+            boxShadow: "0 20px 60px rgba(0,0,0,0.08)",
+          }}
+        >
+          <div className="eyebrow">WELCOME TO TODO AI</div>
+
+          <h1 style={{ marginTop: "12px" }}>
+            Let’s make today feel lighter.
+          </h1>
+
+          <p style={{ marginTop: "12px", opacity: 0.7 }}>
+            What should we call you?
+          </p>
+
+          <input
+            autoFocus
+            value={nameInput}
+            onChange={(event) => setNameInput(event.target.value)}
+            placeholder="Enter your first name"
+            aria-label="Your name"
+            style={{
+              width: "100%",
+              marginTop: "24px",
+              padding: "14px 16px",
+              borderRadius: "12px",
+              border: "1px solid #ddd",
+              fontSize: "16px",
+              boxSizing: "border-box",
+            }}
+          />
+
+          <button
+            type="submit"
+            disabled={!nameInput.trim()}
+            style={{
+              width: "100%",
+              marginTop: "14px",
+              padding: "14px",
+              border: 0,
+              borderRadius: "12px",
+              cursor: nameInput.trim() ? "pointer" : "not-allowed",
+              fontSize: "15px",
+              fontWeight: 600,
+            }}
+          >
+            Continue →
+          </button>
+        </form>
+      </main>
+    );
+  }
+
+
   return (
     <div className="app-shell workspace-texture selection-warm" data-testid="page-todo-workspace">
       <aside className="sidebar">
@@ -315,13 +399,13 @@ export default function Home() {
         </nav>
         <div className="sidebar-bottom">
           <div className="sidebar-note"><Sparkles size={15} /><span>Try saying<br /><strong>“Get ready for Friday”</strong></span></div>
-          <div className="sidebar-footer"><span className="avatar">AR</span><span><strong>Alex Rivera</strong><small>Personal workspace</small></span><ChevronDown size={14} /></div>
+          <div className="sidebar-footer"><span className="avatar">{userName.slice(0, 2).toUpperCase()}</span><span><strong>{userName}</strong><small>Personal workspace</small></span><ChevronDown size={14} /></div>
         </div>
       </aside>
 
       <main className="main-content">
         <header className="topbar">
-          <div><span className="date-kicker"><Clock3 size={14} /> {format(new Date(), 'EEEE, MMMM d')}</span><h1 data-testid="heading-today">Good morning, Alex<span>.</span></h1></div>
+          <div><span className="date-kicker"><Clock3 size={14} /> {format(new Date(), 'EEEE, MMMM d')}</span><h1 data-testid="heading-today">Good morning, {userName}<span>.</span></h1></div>
           <div className="topbar-actions"><span className="focus-status"><span /> focus mode</span><button className="avatar mobile-avatar" aria-label="Open profile" data-testid="button-profile">AR</button></div>
         </header>
 
