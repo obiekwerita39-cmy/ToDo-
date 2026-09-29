@@ -162,6 +162,12 @@ importers:
         specifier: ^0.4.3
         version: 0.4.3
     devDependencies:
+      '@esbuild/darwin-x64':
+        specifier: ^0.28.2
+        version: 0.28.2
+      '@rollup/rollup-darwin-x64':
+        specifier: ^4.63.5
+        version: 4.63.5
       prettier:
         specifier: ^3.9.6
         version: 3.9.6
@@ -747,6 +753,12 @@ packages:
 
   '@drizzle-team/brocli@0.10.2':
     resolution: {integrity: sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w==}
+
+  '@esbuild/darwin-x64@0.28.2':
+    resolution: {integrity: sha512-uq6suIWYP37qzGddBKPw5QEQPi6HiLGsO7UmkpfyaYNQ3D+rN6w6WfwH+nuqcGXWvawGwxOEroO4YGnFh95azw==}
+    engines: {node: '>=18'}
+    cpu: [x64]
+    os: [darwin]
 
   '@esbuild/linux-x64@0.28.2':
     resolution: {integrity: sha512-4xTZr1FUmSoQW4XIWmit3tzQrUTZM+N3P0XV8xROKYF50XfI7xeO90+1bZvNwxIufQ9hDQVRJH5YhgPVF8A/HQ==}
@@ -1491,6 +1503,11 @@ packages:
 
   '@rolldown/pluginutils@1.0.0-rc.3':
     resolution: {integrity: sha512-eybk3TjzzzV97Dlj5c+XrBFW57eTNhzod66y9HrBlzJ6NsCrWCp/2kaPS3K9wJmurBC0Tdw4yPjXKZqlznim3Q==}
+
+  '@rollup/rollup-darwin-x64@4.63.5':
+    resolution: {integrity: sha512-4nJJGg5jbo2wwPP4JP+LfEBA3bvP8rU9CLuhp7jWvq9sxEyhjQFTFdrqi+/dHEin/pd8jpT0vcehIpnZtmEdcQ==}
+    cpu: [x64]
+    os: [darwin]
 
   '@rollup/rollup-linux-x64-gnu@4.63.1':
     resolution: {integrity: sha512-gfI5T24WLLuFfSKw7Go/zDXjAAV0fny0swTaDv+WjK7vqcw4cRhFfdsyKL1n+ukI+ooBxn3bVQnyrn06WpI50w==}
@@ -3238,6 +3255,8 @@ snapshots:
 
   '@drizzle-team/brocli@0.10.2': {}
 
+  '@esbuild/darwin-x64@0.28.2': {}
+
   '@esbuild/linux-x64@0.28.2':
     optional: true
 
@@ -4109,6 +4128,8 @@ snapshots:
       '@jridgewell/trace-mapping': 0.3.31
 
   '@rolldown/pluginutils@1.0.0-rc.3': {}
+
+  '@rollup/rollup-darwin-x64@4.63.5': {}
 
   '@rollup/rollup-linux-x64-gnu@4.63.1':
     optional: true
